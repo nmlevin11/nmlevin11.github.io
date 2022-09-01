@@ -11,4 +11,4 @@ And here is a little information about me:
 * Day job: Compliance Associate for a GMP Engineering and Maintenance department
 * Night job: Statistics Master Degree student at North Carolina State University
 * My Face: 
-![]("main/self.jpg")
+![]("nmlevin11.github.io/self.jpg")
