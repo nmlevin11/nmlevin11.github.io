@@ -10,5 +10,6 @@ And here is a little information about me:
 * Email address: nmlevin@ncsu.edu
 * Day job: Compliance Associate for a GMP Engineering and Maintenance department
 * Night job: Statistics Master Degree student at North Carolina State University
-* My Face: 
+* My Face:  
+
 ![My Face](Self.JPG)
