@@ -1,0 +1,326 @@
+---
+title: "558 Project 1"
+author: "Nicole Levin"
+date: "2022-09-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+# Data processing
+In this project, my goal is to process and plot census data using functions of my own creation. I am starting by reading in and manipulating a single data set to understand what I want my functions to do to parse it into a form that is usable for my analysis goals. Later on, this will be converted into functions that can be used to parse other similar data sets.  
+
+First, I am importing the data and converting the data to long format. I want to make rows for each of my enrollment observations, so I identified those as the "ends with D" columns. I also want the new long data set column of those values to be named "enrollment." I am giving the survey name containing column the name "info string" as it is going to get parsed later.
+
+```{r}
+library(tidyverse)
+library(readr)
+
+# Read in data, and grab just what I want
+sheet1 <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv")
+sheet1subset <- sheet1 %>% select(Area_name, STCOU, ends_with("D")) %>% rename(area_name = Area_name)
+
+# Convert data to long format. I want to make rows for each of my enrollment 
+# observations, so I identified those as the "ends with D" columns. I want the 
+# new long data set column of those values to be named "enrollment." I'm giving 
+# the column the survey names are going to the name "info string" as it is 
+# going to get parsed later.
+sheet1Long <- sheet1subset %>% pivot_longer(cols = ends_with("D"), names_to = "infoString", values_to = "enrollment")
+```
+Next, I need to convert separate the year and measurement portions of my "info string" data column. I am doing this with the substr function, and converting the two digit years to four digit years.
+
+```{r}
+# Convert to 4 digit year
+year <- as.numeric(substr(sheet1Long$infoString, start=8, stop=9))
+year <- ifelse(year>50, year+1900, year+2000)
+
+# Pull measurement out of the info string as the first 7 digits.
+measurement <- substr(sheet1Long$infoString, start=1, stop=7)
+```
+Next, I need to separate my data into county and non-county data. I am doing this by using a grepl function to identify rows with an area name of "County, State" as county data. I am also adding a county class to the county data and separating county and state.
+```{r}
+# Find which rows are county data.
+countyFilter <- grepl(pattern = ", \\w\\w", sheet1Long$area_name)
+
+# Combine all of the data columns I need now
+allCombined <- cbind(sheet1Long, year, measurement, countyFilter)
+
+# Separate county and non-county data
+countyData <- allCombined %>% filter(countyFilter==TRUE) %>%  select(area_name, STCOU, enrollment, year, measurement)
+noncountyData <- allCombined %>% filter(countyFilter==FALSE) %>%  select(area_name, STCOU, enrollment, year, measurement)
+
+# Add a county class to the county data, and separate county and state.
+class(countyData) <- c("county", class(countyData))
+countyData2 <- countyData %>% separate(area_name, c("county", "state"), sep=", ", convert = TRUE, remove = TRUE)
+```
+Next, I am adding a division variable to the non-county data that corresponds to the state's division. I am creating division vectors for each of the 9 divisions listing the states in that division and using %in% statements to check if the state for each row is in each division.
+```{r}
+# Create column vectors for the states in each division to be used for 
+# identifying the division for each rown in the non-county data.
+
+# Connecticut, Maine, Massachusetts, New Hampshire, Rhode Island, and Vermont
+division1 <- c("CONNECTICUT", "MAINE", "MASSACHUSETTS", "NEW HAMPSHIRE", "RHODE ISLAND", "VERMONT")
+
+# New Jersey, New York, and Pennsylvania
+division2 <- c("NEW JERSEY", "NEW YORK", "PENNSYLVANIA")
+
+# Illinois, Indiana, Michigan, Ohio, and Wisconsin
+division3 <- c("ILLINOIS", "INDIANA", "MICHIGAN", "OHIO", "WISCONSIN")
+
+# Iowa, Kansas, Minnesota, Missouri, Nebraska, North Dakota, and South Dakota
+division4 <- c("IOWA", "KANSAS", "MINNESOTA", "MISSOURI", "NEBRASKA", "NORTH DAKOTA", "SOUTH DAKOTA")
+
+# Delaware; Florida; Georgia; Maryland; North Carolina; South Carolina; Virginia; Washington, D.C. and West Virginia
+division5 <- c("DELAWARE", "FLORIDA", "GEORGIA", "MARYLAND", "NORTH CAROLINA", "SOUTH CAROLINA", "VIRGINIA", "WEST VIRGINIA")
+
+# Alabama, Kentucky, Mississippi, and Tennessee
+division6 <- c("ALABAMA", "KENTUCKY", "MISSISSIPPI", "TENNESSEE")
+
+#Arkansas, Louisiana, Oklahoma, and Texas
+division7 <- c("ARKANSAS", "LOUISIANA", "OKLAHOMA", "TEXAS")
+
+# Arizona, Colorado, Idaho, Montana, Nevada, New Mexico, Utah, and Wyoming
+division8 <- c("ARIZONA", "COLORADO", "IDAHO", "MONTANA", "NEVADA", "NEW MEXICO", "UTAH", "WYOMING")
+
+# Alaska, California, Hawaii, Oregon, and Washington
+division9 <- c("ALASKA", "CALIFORNIA", "HAWAII", "OREGON", "WASHINGTON")
+
+# Find division for each observation in the state (or non-county) data.
+noncountyData2 <- noncountyData %>% mutate(division = if_else(area_name %in% division1, "1", if_else(area_name %in% division2,"2", if_else(area_name %in% division3, "3", if_else(area_name %in% division4, "4", if_else(area_name %in% division5, "5", if_else(area_name %in% division6, "6", if_else(area_name %in% division7, "7", if_else(area_name %in% division8, "8", if_else(area_name %in% division9, "9", "ERROR" ))))))))))
+```
+# Creating functions to do the work
+Next, I am writing functions to do the operations above for another data set. First, I am reading in a different, but similar data set, and using my first function to grab the desired data columns and convert the data to long form like previously.
+```{r}
+# First read in the data
+library(readr)
+rawData <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv")
+
+# Now I will create function to grab the desired data columns and convert to long 
+# data form. Need to include option to specify the name of the column r
+# epresenting the value
+function12 <- function(rawData, valueName ="Value"){
+  dataSubset <- rawData %>% select(Area_name, STCOU, ends_with("D")) %>% rename(area_name = Area_name)
+dataLong <- dataSubset %>% pivot_longer(cols = ends_with("D"), names_to = "infoString", values_to = valueName)
+}
+
+# Test that it works
+result1 <- function12(rawData, "testvalue")
+```
+Now I am creating a function that takes the output of the first function and performs the next step, parsing the "info string." Namely, separating the year and measurement and changing the year format.
+```{r}
+# Now create a function that takes the output of function 1-2 and performs step 
+# 3, parsing the "info string" and changing the year format.
+function3 <- function(dataLong){
+  year <- as.numeric(substr(dataLong$infoString, start=8, stop=9))
+  year <- ifelse(year>50, year+1900, year+2000)
+  measurement <- substr(sheet1Long$infoString, start=1, stop=7)
+  allCombined <- cbind(dataLong[,c(1,2,4)], year, measurement)
+}
+
+# Test that it works
+result2 <- function3(result1)
+```
+The nxt two functions that I am creating separate the county and state in the county data and add division to the state, or non-county, data.    
+```{r}
+# Now create a function to do step 5, separating county and state in the county data.
+function5 <- function(countyData){
+  countyData2 <- countyData %>% separate(area_name, c("county", "state"), sep=", ", convert = TRUE, remove = TRUE)
+}
+
+# Now create a function to do step 6, adding division to the state (non-county) data.
+function6 <- function(noncountyData){
+  # Connecticut, Maine, Massachusetts, New Hampshire, Rhode Island, and Vermont
+division1 <- c("CONNECTICUT", "MAINE", "MASSACHUSETTS", "NEW HAMPSHIRE", "RHODE ISLAND", "VERMONT")
+
+# New Jersey, New York, and Pennsylvania
+division2 <- c("NEW JERSEY", "NEW YORK", "PENNSYLVANIA")
+
+# Illinois, Indiana, Michigan, Ohio, and Wisconsin
+division3 <- c("ILLINOIS", "INDIANA", "MICHIGAN", "OHIO", "WISCONSIN")
+
+# Iowa, Kansas, Minnesota, Missouri, Nebraska, North Dakota, and South Dakota
+division4 <- c("IOWA", "KANSAS", "MINNESOTA", "MISSOURI", "NEBRASKA", "NORTH DAKOTA", "SOUTH DAKOTA")
+
+# Delaware; Florida; Georgia; Maryland; North Carolina; South Carolina; Virginia; Washington, D.C. and West Virginia
+division5 <- c("DELAWARE", "FLORIDA", "GEORGIA", "MARYLAND", "NORTH CAROLINA", "SOUTH CAROLINA", "VIRGINIA", "WEST VIRGINIA")
+
+# Alabama, Kentucky, Mississippi, and Tennessee
+division6 <- c("ALABAMA", "KENTUCKY", "MISSISSIPPI", "TENNESSEE")
+
+#Arkansas, Louisiana, Oklahoma, and Texas
+division7 <- c("ARKANSAS", "LOUISIANA", "OKLAHOMA", "TEXAS")
+
+# Arizona, Colorado, Idaho, Montana, Nevada, New Mexico, Utah, and Wyoming
+division8 <- c("ARIZONA", "COLORADO", "IDAHO", "MONTANA", "NEVADA", "NEW MEXICO", "UTAH", "WYOMING")
+
+# Alaska, California, Hawaii, Oregon, and Washington
+division9 <- c("ALASKA", "CALIFORNIA", "HAWAII", "OREGON", "WASHINGTON")
+
+noncountyData2 <- noncountyData %>% mutate(division = if_else(area_name %in% division1, "1", if_else(area_name %in% division2,"2", if_else(area_name %in% division3, "3", if_else(area_name %in% division4, "4", if_else(area_name %in% division5, "5", if_else(area_name %in% division6, "6", if_else(area_name %in% division7, "7", if_else(area_name %in% division8, "8", if_else(area_name %in% division9, "9", "ERROR" ))))))))))
+}
+```
+Now I am creating a function to separate the county and state data. It
+also calls the functions that were created in the previous step to add divisions to the state data and separate county and state in the county data. The function then returns two final tibbles in a list. The first item in the list is the county data, and the second item is the non-county data.
+```{r}
+# Now create a function to do step 4, separating the county and state data, and 
+# also calls functions 5 and 6 to return two final tibbles.
+function4 <- function(allCombined){
+  countyFilter <- grepl(pattern = ", \\w\\w", sheet1Long$area_name)
+  allCombined <- cbind(allCombined, countyFilter)
+  countyData <- as_tibble(allCombined %>% filter(countyFilter==TRUE) %>%  select(1:5))
+  noncountyData <- as_tibble(allCombined %>% filter(countyFilter==FALSE) %>%   select(1:5))
+  class(countyData) <- c("county", class(countyData))
+  countyDataFinal <- function5(countyData)
+  noncountyDataFinal <- function6(noncountyData)
+  return (list(countyDataFinal, noncountyDataFinal))
+}
+
+# Test that it works
+result3 <- function4(result2)
+```
+The final step here is to put it into one function call using a wrapper function. My wrapper function takes the url of a data set and an optional argument for the user to give the value column a name. I an giving this argument a default value of "Value."
+```{r}
+# Now create a wrapper to do it all in one fuction call
+myWrapper <- function(url, valueName = "Value"){ 
+  rawData <- read_csv(url)
+  dataLong <- function12(rawData, valueName)
+  allCombined <- function3(dataLong)
+  finalResult <- function4(allCombined) 
+  return (finalResult)
+}
+
+# Try it out
+result4 <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", valueName = "testName")
+```
+I am now using the wrapper function to read in both data sets and using a newly created function to combine the data sets appropriately, all of the county data together and all of the non-county data together.
+```{r}
+# Now use the function to read in both data sets
+firstDatasetResult <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", valueName = "Enrollment")
+secondDatasetResult <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", valueName = "Enrollment")
+
+# We now want to bind the two datasets so that the two county sets get combined 
+# and the two non-county datasets get combined.
+functionCombine <- function(firstSet, secondSet){
+  combo1 <- dplyr::bind_rows(firstSet[1], secondSet[1])
+  combo2 <- dplyr::bind_rows(firstSet[2], secondSet[2])
+  listResult <- list(combo1,combo2)
+  return(listResult)
+}
+
+#Test it out
+result7 <- functionCombine(firstDatasetResult, secondDatasetResult) 
+
+```
+
+# Adding functions for plotting
+The next section will look at functions for plotting and summarizing. First I am creating a function to plot the mean value for the state data by division and year utilzing a combination of a group_by and summarize function and plotting the resulting mean values for each division by year.
+```{r}
+# Create a function to plot the mean value for the state data by division and 
+# year.
+plot.state <- function(df, valueName = "Value"){
+divisionMean <- df %>% group_by(division, year) %>% summarize(mean(get(valueName))) %>% filter(division !="ERROR") %>% rename(Mean = starts_with("mean"))
+  ggplot(divisionMean, aes(x = year, y = Mean, color = division)) + geom_line()
+}  
+
+# Test it out
+plot.state(result7[[2]], "Enrollment")
+```
+  
+Next, I am creating a function to plot the county data. This one requires more 
+options: selecting a state, how many counties we want to plot, and whether we 
+want the top or the bottom n counties.
+```{r}
+# Next, create a function to plot the county data.
+plot.county <- function(df, stateChoice = "AL", sortDirection = "Top", nChoice = 5, valueName = "Value"){
+  countyMean <- df %>% filter(state == stateChoice) %>% group_by(county) %>% summarize(mean(get(valueName))) %>% rename(Mean = starts_with("mean"))
+  countyMeanSorted <- if(sortDirection == "Top") {countyMean %>% arrange(Mean) } else {countyMean %>% arrange(desc(Mean))}
+  countyMeanSubset <- countyMeanSorted %>% slice(1:nChoice)
+  dataForPlot <- df %>% filter(state == stateChoice, county ==   countyMeanSubset$county) 
+  ggplot(dataForPlot, aes(x = year, y = get(valueName), color = county)) +
+       geom_line() + ylab(valueName)
+}
+
+# Test that it works.
+plot.county(result7[[1]], stateChoice="PA", sortDirection= "Top", nChoice = 7, valueName = "Enrollment")
+
+```
+
+# Putting it all together
+The code below will run the data processing function on the original two enrollment data sets. Then, the data will be combined into one object, and plotting is performed on the state and county data separately.
+```{r}
+# Pull in and process the two data sets.
+firstDatasetResult <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", valueName = "Enrollment")
+secondDatasetResult <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", valueName = "Enrollment")
+
+# Combine the data sets.
+combinedDataset <- functionCombine(firstDatasetResult, secondDatasetResult) 
+
+```
+  
+Now, I'll plot a summary of the state data.
+```{r}
+plot.state(combinedDataset[[2]], "Enrollment")
+```
+
+Next, I'll plat a few subsets of the county data, starting with the Pennsylvania top 7.
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="PA", sortDirection= "Top", nChoice = 7, valueName = "Enrollment")
+```
+
+The next combination of interest is the bottom 4 in Pennsylvania.
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="PA", sortDirection= "Bottom", nChoice = 4, valueName = "Enrollment")
+```
+
+The next combination is all of the defaults.
+```{r}
+plot.county(combinedDataset[[1]], valueName = "Enrollment")
+```
+
+The next combination is the top 10 in Minnesota.
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="MN", sortDirection= "Top", nChoice = 10, valueName = "Enrollment")
+```
+
+Now, I'll use the processing and plotting functions for a similar data set. First, I'll process the four new data sets.
+```{r}
+datasetResult1 <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01a.csv", valueName = "Population")
+datasetResult2 <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01b.csv", valueName = "Population")
+datasetResult3 <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01c.csv", valueName = "Population")
+datasetResult4 <- myWrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01d.csv", valueName = "Population")
+```
+
+Next, I will combine the data sets
+```{r}
+combinedDataset <- functionCombine(datasetResult1, datasetResult2) 
+combinedDataset <- functionCombine(combinedDataset, datasetResult3) 
+combinedDataset <- functionCombine(combinedDataset, datasetResult4) 
+```
+
+Now, I will plot the state data
+```{r}
+plot.state(combinedDataset[[2]], "Population")
+```
+
+Next, I'll plot a few options of the county data, starting with the top 6 in Connecticut.
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="CT", sortDirection= "Top", nChoice = 6, valueName="Population")
+```
+
+Next I'll plot for the bottom 10 in North Caralina.
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="NC", sortDirection= "Bottom", nChoice = 10, valueName="Population")
+```
+
+Next I'll use defaults
+```{r}
+plot.county(combinedDataset[[1]], valueName="Population")
+```
+
+Lastly, I'll look at the top 4 for Minnesota
+```{r}
+plot.county(combinedDataset[[1]], stateChoice="MN", sortDirection= "Top", nChoice = 4, valueName="Population")
+```
+
+The functions created through this project could now be used to quickly get a visual summary for similar data sets in the future.
