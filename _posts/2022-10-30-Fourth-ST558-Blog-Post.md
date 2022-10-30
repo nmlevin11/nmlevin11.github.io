@@ -1,4 +1,4 @@
-One important part of building a regression model is determining what variables to use in a regression model. Three resources that I read to inform my plan going forward for selecting variables for a model are listed at the end of this blog post. One key takeaway I found from those resources is that variable selection can be complicated and subjective, and there is no one-size-fits-all answer for it.
+One important part of building a regression model is determining what variables to use. Three resources that I read to inform my plan going forward for selecting variables for a model are listed at the end of this blog post. One key takeaway I found from those resources is that variable selection can be complicated and subjective, and there is no one-size-fits-all answer for it.
 
 The steps, thoughts, and ideas I plan to take with me for variable selection in the future are:  
 
