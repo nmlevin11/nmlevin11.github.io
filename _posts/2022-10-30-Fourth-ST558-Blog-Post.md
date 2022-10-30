@@ -14,7 +14,7 @@ The steps, thoughts, and ideas I plan to take with me for variable selection in 
 
 In summary, my main take away from delving a little into variable selection is to be more thoughtful and conscious of every step and decision along the way. Think critically when I need to, expansively when I need to, and above all else, understand what I'm doing and why all along the way.
 
-Resources that helped me question whether I know anything about variable selection at all:
-[NCBI article](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5969114/)
-[Biostat book](https://www.biostat.jhsph.edu/~iruczins/teaching/jf/ch10.pdf)
-[Ratner article](https://link.springer.com/content/pdf/10.1057/jt.2009.26.pdf)
+Resources that helped me question whether I know anything about variable selection at all:  
+* [NCBI article](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5969114/) 
+* [Biostat book](https://www.biostat.jhsph.edu/~iruczins/teaching/jf/ch10.pdf) 
+* [Ratner article](https://link.springer.com/content/pdf/10.1057/jt.2009.26.pdf) 
